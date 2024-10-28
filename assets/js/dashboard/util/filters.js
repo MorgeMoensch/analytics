@@ -239,23 +239,50 @@ export function cleanLabels(filters, labels, mergedFilterKey, mergedLabels) {
   return result
 }
 
+const NO_PREFIX_KEYS = new Set(['segment'])
+const EVENT_FILTER_KEYS = new Set(['name', 'page', 'goal', 'hostname'])
+const EVENT_PREFIX = 'event:'
+const VISIT_PREFIX = 'visit:'
+
 function remapFilterKey(filterKey) {
-  const EVENT_FILTER_KEYS = new Set(['name', 'page', 'goal', 'hostname'])
-  const NO_PREFIX_KEYS = new Set(['segment'])
   if (NO_PREFIX_KEYS.has(filterKey)) {
     return filterKey
   }
   if (EVENT_FILTER_KEYS.has(filterKey)) {
-    return `event:${filterKey}`
+    return `${EVENT_PREFIX}${filterKey}`
   }
-  return `visit:${filterKey}`
+  return `${VISIT_PREFIX}${filterKey}`
 }
+
+function remapApiFilterKey(apiFilterKey) {
+  const isNoPrefixKey = NO_PREFIX_KEYS.has(apiFilterKey);
+
+  if (isNoPrefixKey) {
+    return apiFilterKey;
+  }
+
+  const isEventKey = apiFilterKey.startsWith(EVENT_PREFIX)
+  const isVisitKey = apiFilterKey.startsWith(VISIT_PREFIX)
+
+  if (isEventKey) {return apiFilterKey.substring(EVENT_PREFIX.length)}
+  if (isVisitKey) {return apiFilterKey.substring(VISIT_PREFIX.length)}
+
+  return apiFilterKey // maybe throw?
+}
+
 
 export function remapToApiFilters(filters) {
   return filters.map(([operation, filterKey, clauses]) => {
     return [operation, remapFilterKey(filterKey), clauses]
   })
 }
+
+export function remapFromApiFilters(apiFilters) {
+  return apiFilters.map(([operation, apiFilterKey, clauses]) => {
+    return [operation, remapApiFilterKey(apiFilterKey), clauses]
+  })
+}
+
 
 export function serializeApiFilters(filters) {
   return JSON.stringify(remapToApiFilters(filters))

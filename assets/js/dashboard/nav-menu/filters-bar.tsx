@@ -12,7 +12,8 @@ import {
 import { FilterPillsList, PILL_X_GAP } from './filter-pills-list'
 import { useQueryContext } from '../query-context'
 import { SaveSegmentAction } from '../segments/segment-actions'
-import { isSegmentFilter } from '../segments/segments'
+import { EditingSegmentState, isSegmentFilter } from '../segments/segments'
+import { useLocation } from 'react-router-dom'
 
 const SEE_MORE_GAP_PX = 16
 const SEE_MORE_WIDTH_PX = 36
@@ -99,6 +100,9 @@ export const FiltersBar = () => {
   const seeMoreRef = useRef<HTMLDivElement>(null)
   const [visibility, setVisibility] = useState<null | VisibilityState>(null)
   const { query } = useQueryContext()
+  const { state: locationState } = useLocation() as {
+    state?: EditingSegmentState
+  }
 
   const [opened, setOpened] = useState(false)
 
@@ -203,7 +207,25 @@ export const FiltersBar = () => {
         {!query.filters.some((f) => isSegmentFilter(f)) && (
           <>
             <VerticalSeparator />
-            <SaveSegmentAction />
+            <SaveSegmentAction options={[{ type: 'create segment' }]} />
+          </>
+        )}
+        {typeof locationState?.editingSegmentId === 'number' && (
+          <>
+            <VerticalSeparator />
+            <SaveSegmentAction
+              options={[
+                {
+                  type: 'update segment',
+                  segment: {
+                    id: locationState.editingSegmentId,
+                    name: '',
+                    personal: false
+                  }
+                },
+                { type: 'create segment' }
+              ]}
+            />
           </>
         )}
       </div>

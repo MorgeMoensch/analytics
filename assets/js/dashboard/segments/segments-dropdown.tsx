@@ -7,7 +7,12 @@ import {
 } from '../components/dropdown'
 import { useQueryContext } from '../query-context'
 import { useSiteContext } from '../site-context'
-import { formatSegmentIdAsLabelKey, isSegmentFilter } from './segments'
+import {
+  EditingSegmentState,
+  formatSegmentIdAsLabelKey,
+  isSegmentFilter,
+  parseApiSegmentData
+} from './segments'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { cleanLabels } from '../util/filters'
 import { useAppNavigate } from '../navigation/use-app-navigate'
@@ -24,7 +29,10 @@ export const SegmentsList = ({ close }: { close: () => void }) => {
         `/internal-api/${encodeURIComponent(site.domain)}/segments`,
         {
           method: 'GET',
-          headers: { 'content-type': 'application/json' }
+          headers: {
+            'content-type': 'application/json',
+            accept: 'application/json'
+          }
         }
       ).then(
         (res) =>
@@ -124,6 +132,7 @@ const EditSegment = ({
       )}
       onClick={() => {
         navigate({
+          state: { editingSegmentId: id } as EditingSegmentState,
           search: (s) => ({
             ...s,
             filters: [['is', 'segment', [id]]],
@@ -156,7 +165,12 @@ const DeleteSegment = ({
         {
           method: 'DELETE'
         }
-      ).then((res) => res.json())
+      )
+        .then((res) => res.json())
+        .then((d) => ({
+          ...d,
+          segment_data: parseApiSegmentData(d.segment_data)
+        }))
     },
     onSuccess: async (_d) => {
       queryClient.invalidateQueries({ queryKey: ['segments'] })
@@ -179,7 +193,7 @@ const DeleteSegment = ({
           ]
       navigate({
         search: (s) => {
-          return { ...s, filters: newFilters, labels: cleanLabels(newFilters) }
+          return { ...s, filters: newFilters, labels: cleanLabels(newFilters, query.labels) }
         }
       })
     }
