@@ -5,6 +5,9 @@ import ModalWithRouting from '../stats/modals/modal'
 import classNames from 'classnames'
 import { SavedSegment } from './segments'
 
+const buttonClass =
+  'h-12 text-md font-medium py-2 px-3 rounded border dark:border-gray-100 dark:text-gray-100'
+
 export const CreateSegmentModal = ({
   segment,
   close,
@@ -66,17 +69,16 @@ export const CreateSegmentModal = ({
         </span>
       </div>
       <div className="mt-8 flex gap-x-2 items-center justify-end">
-        <button
-          className="h-12 text-md font-medium py-2 px-3 rounded border"
-          onClick={close}
-        >
+        <button className={buttonClass} onClick={close}>
           Cancel
         </button>
         <button
-          className="h-12 text-md font-medium py-2 px-3 rounded border"
+          className={buttonClass}
           onClick={() => {
             const trimmedName = name.trim()
-            const saveableName = trimmedName.length ? trimmedName : namePlaceholder
+            const saveableName = trimmedName.length
+              ? trimmedName
+              : namePlaceholder
             onSave({ name: saveableName, personal })
           }}
         >
@@ -145,17 +147,16 @@ export const UpdateSegmentModal = ({
         </span>
       </div>
       <div className="mt-8 flex gap-x-2 items-center justify-end">
-        <button
-          className="h-12 text-md font-medium py-2 px-3 rounded border"
-          onClick={close}
-        >
+        <button className={buttonClass} onClick={close}>
           Cancel
         </button>
         <button
-          className="h-12 text-md font-medium py-2 px-3 rounded border"
+          className={buttonClass}
           onClick={() => {
             const trimmedName = name.trim()
-            const saveableName = trimmedName.length ? trimmedName : namePlaceholder
+            const saveableName = trimmedName.length
+              ? trimmedName
+              : namePlaceholder
             onSave({ id: segment.id, name: saveableName, personal })
           }}
         >

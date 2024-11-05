@@ -24,6 +24,8 @@ import {
 import { cleanLabels } from '../util/filters'
 import { useAppNavigate } from '../navigation/use-app-navigate'
 import classNames from 'classnames'
+import { Tooltip } from '../util/tooltip'
+import { formatDayShort, parseUTCDate } from '../util/date'
 
 export const SegmentsList = ({ closeList }: { closeList: () => void }) => {
   const { query } = useQueryContext()
@@ -44,7 +46,11 @@ export const SegmentsList = ({ closeList }: { closeList: () => void }) => {
       ).then(
         (res) =>
           res.json() as Promise<
-            { name: string; id: number; personal: boolean }[]
+            (SavedSegment & {
+              ownerId: number
+              inserted_at: string
+              updated_at: string
+            })[]
           >
       )
       return response
@@ -58,12 +64,24 @@ export const SegmentsList = ({ closeList }: { closeList: () => void }) => {
     !!data?.length && (
       <DropdownLinkGroup>
         {data.map((s) => (
-          <SegmentLink
+          <Tooltip
             key={s.id}
-            {...s}
-            appliedSegmentIds={appliedSegmentIds}
-            closeList={closeList}
-          />
+            info={
+              <div>
+                <div>{`${s.personal ? 'Personal' : 'Shared'} segment`}</div>
+                <div className="font-normal text-xs">{`Created at ${formatDayShort(parseUTCDate(s.inserted_at))}`}</div>
+                {s.updated_at !== s.inserted_at && (
+                  <div className="font-normal text-xs">{`Last updated at ${formatDayShort(parseUTCDate(s.updated_at))}`}</div>
+                )}
+              </div>
+            }
+          >
+            <SegmentLink
+              {...s}
+              appliedSegmentIds={appliedSegmentIds}
+              closeList={closeList}
+            />
+          </Tooltip>
         ))}
       </DropdownLinkGroup>
     )
@@ -153,7 +171,9 @@ const SegmentLink = ({
       key={id}
       active={appliedSegmentIds.includes(id)}
       onMouseEnter={prefetchSegment}
-      navigateOptions={{state: {editingSegment: null} as EditingSegmentState}}
+      navigateOptions={{
+        state: { editingSegment: null } as EditingSegmentState
+      }}
       search={(search) => {
         const otherFilters = query.filters.filter((f) => !isSegmentFilter(f))
         const updatedSegmentIds = appliedSegmentIds.includes(id)
@@ -176,18 +196,9 @@ const SegmentLink = ({
         return {
           ...search,
           filters: updatedFilters,
-          labels: cleanLabels(
-            updatedFilters,
-            query.labels,
-            'segment',
-            {[formatSegmentIdAsLabelKey(id)]: name}
-            // Object.fromEntries(
-            //   updatedSegmentIds.map((id) => [
-            //     formatSegmentIdAsLabelKey(id),
-            //     data.find() ?? 'Unknown segment'
-            //   ])
-            // )
-          ),
+          labels: cleanLabels(updatedFilters, query.labels, 'segment', {
+            [formatSegmentIdAsLabelKey(id)]: name
+          })
         }
       }}
       actions={

@@ -37,7 +37,7 @@ export const FilterPillsList = React.forwardRef<
 >(({ className, style, slice, direction }, ref) => {
   const { query } = useQueryContext()
   const navigate = useAppNavigate()
-  
+
   const renderableFilters =
     slice?.type === 'no-render-outside'
       ? query.filters.slice(slice.start, slice.end)

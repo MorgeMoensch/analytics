@@ -3,7 +3,10 @@
 import React, { useMemo } from 'react'
 import * as api from '../api'
 import { useQueryContext } from '../query-context'
-import { formatSegmentIdAsLabelKey, isSegmentFilter } from '../segments/segments'
+import {
+  formatSegmentIdAsLabelKey,
+  isSegmentFilter
+} from '../segments/segments'
 
 export const FILTER_MODAL_TO_FILTER_GROUP = {
   page: ['page', 'entry_page', 'exit_page'],
@@ -255,21 +258,24 @@ function remapFilterKey(filterKey) {
 }
 
 function remapApiFilterKey(apiFilterKey) {
-  const isNoPrefixKey = NO_PREFIX_KEYS.has(apiFilterKey);
+  const isNoPrefixKey = NO_PREFIX_KEYS.has(apiFilterKey)
 
   if (isNoPrefixKey) {
-    return apiFilterKey;
+    return apiFilterKey
   }
 
   const isEventKey = apiFilterKey.startsWith(EVENT_PREFIX)
   const isVisitKey = apiFilterKey.startsWith(VISIT_PREFIX)
 
-  if (isEventKey) {return apiFilterKey.substring(EVENT_PREFIX.length)}
-  if (isVisitKey) {return apiFilterKey.substring(VISIT_PREFIX.length)}
+  if (isEventKey) {
+    return apiFilterKey.substring(EVENT_PREFIX.length)
+  }
+  if (isVisitKey) {
+    return apiFilterKey.substring(VISIT_PREFIX.length)
+  }
 
   return apiFilterKey // maybe throw?
 }
-
 
 export function remapToApiFilters(filters) {
   return filters.map(([operation, filterKey, clauses]) => {
@@ -282,7 +288,6 @@ export function remapFromApiFilters(apiFilters) {
     return [operation, remapApiFilterKey(apiFilterKey), clauses]
   })
 }
-
 
 export function serializeApiFilters(filters) {
   return JSON.stringify(remapToApiFilters(filters))

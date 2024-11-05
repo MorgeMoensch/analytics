@@ -163,7 +163,8 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
   )
 
   const option = options.find((o) => o.type === modal)
-
+  const buttonClass =
+    'whitespace-nowrap rounded font-medium text-sm leading-tight px-2 py-2 h-9 dark:text-gray-500 hover:text-indigo-700 dark:hover:text-indigo-500'
   return (
     <div className="flex">
       {options.map((o) => {
@@ -171,7 +172,7 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
           return (
             <button
               key={o.type}
-              className="whitespace-nowrap rounded font-medium text-sm leading-tight px-2 py-2 h-9 hover:text-indigo-700 dark:hover:text-indigo-500"
+              className={buttonClass}
               onClick={openCreateSegment}
             >
               {options.find((o) => o.type === 'update segment')
@@ -184,7 +185,7 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
           return (
             <button
               key={o.type}
-              className="whitespace-nowrap rounded font-medium text-sm leading-tight px-2 py-2 h-9 hover:text-indigo-700 dark:hover:text-indigo-500"
+              className={buttonClass}
               onClick={openUpdateSegment}
             >
               Update segment

@@ -257,5 +257,7 @@ export const ClearAction = () => (
 )
 
 const VerticalSeparator = () => {
-  return <div className="border-gray-300 border-1 border-l h-9"></div>
+  return (
+    <div className="border-gray-300 dark:border-gray-500 border-1 border-l h-9"></div>
+  )
 }

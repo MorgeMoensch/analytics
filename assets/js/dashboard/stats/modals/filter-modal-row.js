@@ -15,7 +15,10 @@ import {
 import { apiPath } from '../../util/url'
 import { useQueryContext } from '../../query-context'
 import { useSiteContext } from '../../site-context'
-import { formatSegmentIdAsLabelKey, isSegmentFilter } from '../../segments/segments'
+import {
+  formatSegmentIdAsLabelKey,
+  isSegmentFilter
+} from '../../segments/segments'
 
 export default function FilterModalRow({ filter, labels, onUpdate }) {
   const { query } = useQueryContext()
