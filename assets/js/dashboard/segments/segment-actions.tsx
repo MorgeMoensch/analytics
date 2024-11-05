@@ -12,6 +12,7 @@ import {
   remapToApiFilters
 } from '../util/filters'
 import {
+  EditingSegmentState,
   formatSegmentIdAsLabelKey,
   parseApiSegmentData,
   SavedSegment
@@ -84,7 +85,8 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
             filters,
             labels
           }
-        }
+        },
+        state: { editingSegment: null } as EditingSegmentState
       })
       close()
       queryClient.invalidateQueries({ queryKey: ['segments'] })
@@ -144,7 +146,8 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
             filters,
             labels
           }
-        }
+        },
+        state: { editingSegment: null } as EditingSegmentState
       })
       close()
       queryClient.invalidateQueries({ queryKey: ['segments'] })
@@ -161,9 +164,8 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
 
   const option = options.find((o) => o.type === modal)
 
-
   return (
-    <div>
+    <div className="flex">
       {options.map((o) => {
         if (o.type === 'create segment') {
           return (
@@ -172,7 +174,9 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
               className="whitespace-nowrap rounded font-medium text-sm leading-tight px-2 py-2 h-9 hover:text-indigo-700 dark:hover:text-indigo-500"
               onClick={openCreateSegment}
             >
-              Save segment
+              {options.find((o) => o.type === 'update segment')
+                ? 'Save as new segment'
+                : 'Save as segment'}
             </button>
           )
         }
@@ -190,6 +194,7 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
       })}
       {modal === 'create segment' && (
         <CreateSegmentModal
+          segment={options.find((o) => o.type === 'update segment')?.segment}
           namePlaceholder={segmentNamePlaceholder}
           close={close}
           onSave={({ name, personal }) =>
@@ -207,7 +212,7 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
       {option?.type === 'update segment' && (
         <UpdateSegmentModal
           segment={option.segment}
-          namePlaceholder={option.segment.name}
+          namePlaceholder={segmentNamePlaceholder}
           close={close}
           onSave={({ id, name, personal }) =>
             patchSegment.mutate({

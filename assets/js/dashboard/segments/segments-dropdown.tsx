@@ -11,14 +11,21 @@ import {
   EditingSegmentState,
   formatSegmentIdAsLabelKey,
   isSegmentFilter,
-  parseApiSegmentData
+  parseApiSegmentData,
+  SavedSegment,
+  SegmentData
 } from './segments'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  QueryFunction,
+  useMutation,
+  useQuery,
+  useQueryClient
+} from '@tanstack/react-query'
 import { cleanLabels } from '../util/filters'
 import { useAppNavigate } from '../navigation/use-app-navigate'
 import classNames from 'classnames'
 
-export const SegmentsList = ({ close }: { close: () => void }) => {
+export const SegmentsList = ({ closeList }: { closeList: () => void }) => {
   const { query } = useQueryContext()
   const site = useSiteContext()
   const { data } = useQuery({
@@ -50,97 +57,165 @@ export const SegmentsList = ({ close }: { close: () => void }) => {
   return (
     !!data?.length && (
       <DropdownLinkGroup>
-        {data.map(({ name, id, personal }) => (
-          <DropdownNavigationLink
-            key={id}
-            active={appliedSegmentIds.includes(id)}
-            search={(search) => {
-              const otherFilters = query.filters.filter(
-                (f) => !isSegmentFilter(f)
-              )
-              const updatedSegmentIds = appliedSegmentIds.includes(id)
-                ? appliedSegmentIds.filter((i) => i !== id)
-                : [...appliedSegmentIds, id]
-
-              if (!updatedSegmentIds.length) {
-                return {
-                  ...search,
-                  filters: otherFilters,
-                  labels: cleanLabels(otherFilters, query.labels)
-                }
-              }
-
-              const updatedFilters = [
-                ['is', 'segment', updatedSegmentIds],
-                ...otherFilters
-              ]
-
-              return {
-                ...search,
-                filters: updatedFilters,
-                labels: cleanLabels(
-                  updatedFilters,
-                  query.labels,
-                  'segment',
-                  Object.fromEntries(
-                    updatedSegmentIds.map((id) => [
-                      formatSegmentIdAsLabelKey(id),
-                      data.find((s) => s.id === id)?.name || 'Unknown segment'
-                    ])
-                  )
-                )
-              }
-            }}
-            actions={
-              <>
-                <EditSegment
-                  className="ml-auto"
-                  onClick={close}
-                  segment={{ id, name }}
-                />
-                <DeleteSegment
-                  className="ml-2"
-                  segment={{ id, name, personal }}
-                />
-              </>
-            }
-          >
-            {name}
-          </DropdownNavigationLink>
+        {data.map((s) => (
+          <SegmentLink
+            key={s.id}
+            {...s}
+            appliedSegmentIds={appliedSegmentIds}
+            closeList={closeList}
+          />
         ))}
       </DropdownLinkGroup>
     )
   )
 }
 
-const EditSegment = ({
-  className,
-  onClick,
-  segment: { id, name }
-}: {
-  onClick?: () => void
-  className?: string
-  segment: { id: number; name: string }
-}) => {
+const SegmentLink = ({
+  id,
+  name,
+  personal,
+  appliedSegmentIds,
+  closeList
+}: SavedSegment & { appliedSegmentIds: number[]; closeList: () => void }) => {
+  const site = useSiteContext()
+  const { query } = useQueryContext()
+  const queryClient = useQueryClient()
+
+  const queryKey = ['segments', id] as const
+
+  const getSegmentFn: QueryFunction<
+    { segment_data: SegmentData } & SavedSegment,
+    typeof queryKey
+  > = async ({ queryKey: [_, id] }) => {
+    const res = await fetch(
+      `/internal-api/${encodeURIComponent(site.domain)}/segments/${id}`,
+      {
+        method: 'GET',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json'
+        }
+      }
+    )
+    const d = await res.json()
+    return {
+      ...d,
+      segment_data: parseApiSegmentData(d.segment_data)
+    }
+  }
+
   const navigate = useAppNavigate()
 
+  const getSegment = useQuery({
+    enabled: false,
+    queryKey: queryKey,
+    queryFn: getSegmentFn
+  })
+
+  const prefetchSegment = () =>
+    queryClient.prefetchQuery({
+      queryKey,
+      queryFn: getSegmentFn,
+      staleTime: 120_000
+    })
+
+  const fetchSegment = () =>
+    queryClient.fetchQuery({
+      queryKey,
+      queryFn: getSegmentFn
+    })
+
+  const editSegment = async () => {
+    try {
+      const data = getSegment.data ?? (await fetchSegment())
+      navigate({
+        search: (search) => ({
+          ...search,
+          filters: data.segment_data.filters,
+          labels: data.segment_data.labels
+        }),
+        state: {
+          editingSegment: {
+            id: data.id,
+            name: data.name,
+            personal: data.personal
+          }
+        } as EditingSegmentState
+      })
+      closeList()
+    } catch (_error) {
+      return
+    }
+  }
+
+  return (
+    <DropdownNavigationLink
+      key={id}
+      active={appliedSegmentIds.includes(id)}
+      onMouseEnter={prefetchSegment}
+      navigateOptions={{state: {editingSegment: null} as EditingSegmentState}}
+      search={(search) => {
+        const otherFilters = query.filters.filter((f) => !isSegmentFilter(f))
+        const updatedSegmentIds = appliedSegmentIds.includes(id)
+          ? appliedSegmentIds.filter((i) => i !== id)
+          : [...appliedSegmentIds, id]
+
+        if (!updatedSegmentIds.length) {
+          return {
+            ...search,
+            filters: otherFilters,
+            labels: cleanLabels(otherFilters, query.labels)
+          }
+        }
+
+        const updatedFilters = [
+          ['is', 'segment', updatedSegmentIds],
+          ...otherFilters
+        ]
+
+        return {
+          ...search,
+          filters: updatedFilters,
+          labels: cleanLabels(
+            updatedFilters,
+            query.labels,
+            'segment',
+            {[formatSegmentIdAsLabelKey(id)]: name}
+            // Object.fromEntries(
+            //   updatedSegmentIds.map((id) => [
+            //     formatSegmentIdAsLabelKey(id),
+            //     data.find() ?? 'Unknown segment'
+            //   ])
+            // )
+          ),
+        }
+      }}
+      actions={
+        <>
+          <EditSegment className="ml-2" onClick={editSegment} />
+          <DeleteSegment className="ml-2" segment={{ id, name, personal }} />
+        </>
+      }
+    >
+      {name}
+    </DropdownNavigationLink>
+  )
+}
+
+const EditSegment = ({
+  className,
+  onClick
+}: {
+  onClick: () => Promise<void>
+  className?: string
+}) => {
   return (
     <button
       className={classNames(
         'block w-4 h-4 fill-current hover:fill-indigo-600',
         className
       )}
-      onClick={() => {
-        navigate({
-          state: { editingSegmentId: id } as EditingSegmentState,
-          search: (s) => ({
-            ...s,
-            filters: [['is', 'segment', [id]]],
-            labels: { [formatSegmentIdAsLabelKey(id)]: name }
-          })
-        })
-        return onClick && onClick()
-      }}
+      onClick={onClick}
     >
       <EditSegmentIcon />
     </button>
@@ -152,14 +227,14 @@ const DeleteSegment = ({
   segment
 }: {
   className?: string
-  segment: { id: number; name: string; personal: boolean }
+  segment: SavedSegment
 }) => {
   const queryClient = useQueryClient()
   const site = useSiteContext()
   const navigate = useAppNavigate()
   const { query } = useQueryContext()
   const deleteSegment = useMutation({
-    mutationFn: (data: { id: number; name: string; personal: boolean }) => {
+    mutationFn: (data: SavedSegment) => {
       return fetch(
         `/internal-api/${encodeURIComponent(site.domain)}/segments/${data.id}`,
         {
@@ -172,18 +247,22 @@ const DeleteSegment = ({
           segment_data: parseApiSegmentData(d.segment_data)
         }))
     },
-    onSuccess: async (_d) => {
+    onSuccess: (_d): void => {
       queryClient.invalidateQueries({ queryKey: ['segments'] })
+
       const segmentFilterIndex = query.filters.findIndex(isSegmentFilter)
       if (segmentFilterIndex < 0) {
         return
       }
+
       const filter = query.filters[segmentFilterIndex]
       const clauses = filter[2]
       const updatedSegmentIds = clauses.filter((c) => c !== segment.id)
+
       if (updatedSegmentIds.length === clauses.length) {
         return
       }
+
       const newFilters = !updatedSegmentIds.length
         ? query.filters.filter((_f, index) => index !== segmentFilterIndex)
         : [
@@ -191,9 +270,14 @@ const DeleteSegment = ({
             [filter[0], filter[1], updatedSegmentIds],
             ...query.filters.slice(segmentFilterIndex + 1)
           ]
+
       navigate({
         search: (s) => {
-          return { ...s, filters: newFilters, labels: cleanLabels(newFilters, query.labels) }
+          return {
+            ...s,
+            filters: newFilters,
+            labels: cleanLabels(newFilters, query.labels)
+          }
         }
       })
     }

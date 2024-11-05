@@ -15,7 +15,8 @@ export type SegmentData = {
 }
 
 export type EditingSegmentState = {
-  editingSegmentId: number
+  /** null means to definitively close the edit mode */
+  editingSegment: SavedSegment | null
 }
 
 const SEGMENT_LABEL_KEY_PREFIX = 'segment-'

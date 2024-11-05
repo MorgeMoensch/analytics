@@ -1,21 +1,25 @@
 /** @format */
 
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import ModalWithRouting from '../stats/modals/modal'
 import classNames from 'classnames'
 import { SavedSegment } from './segments'
 
 export const CreateSegmentModal = ({
+  segment,
   close,
   onSave,
   namePlaceholder
 }: {
+  segment?: SavedSegment
   close: () => void
   onSave: (input: { name: string; personal: boolean }) => void
   namePlaceholder: string
 }) => {
+  const [name, setName] = useState(
+    segment?.name ? `Copy of ${segment.name}` : ''
+  )
   const [personal, setPersonal] = useState(true)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   return (
     <ModalWithRouting maxWidth="460px" className="p-6 min-h-fit" close={close}>
@@ -30,7 +34,9 @@ export const CreateSegmentModal = ({
       </label>
       <input
         autoComplete="off"
-        ref={inputRef}
+        // ref={inputRef}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
         placeholder={namePlaceholder}
         id="name"
         className="block mt-2 p-2 w-full dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm border border-gray-300 dark:border-gray-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
@@ -69,8 +75,9 @@ export const CreateSegmentModal = ({
         <button
           className="h-12 text-md font-medium py-2 px-3 rounded border"
           onClick={() => {
-            const name = inputRef.current?.value.trim() || namePlaceholder
-            onSave({ name, personal })
+            const trimmedName = name.trim()
+            const saveableName = trimmedName.length ? trimmedName : namePlaceholder
+            onSave({ name: saveableName, personal })
           }}
         >
           Save
@@ -91,8 +98,8 @@ export const UpdateSegmentModal = ({
   segment: SavedSegment
   namePlaceholder: string
 }) => {
+  const [name, setName] = useState(segment.name)
   const [personal, setPersonal] = useState<boolean>(segment.personal)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   return (
     <ModalWithRouting maxWidth="460px" className="p-6 min-h-fit" close={close}>
@@ -107,7 +114,8 @@ export const UpdateSegmentModal = ({
       </label>
       <input
         autoComplete="off"
-        ref={inputRef}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
         placeholder={namePlaceholder}
         id="name"
         className="block mt-2 p-2 w-full dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm border border-gray-300 dark:border-gray-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
@@ -146,8 +154,9 @@ export const UpdateSegmentModal = ({
         <button
           className="h-12 text-md font-medium py-2 px-3 rounded border"
           onClick={() => {
-            const name = inputRef.current?.value.trim() || namePlaceholder
-            onSave({ id: segment.id, name, personal })
+            const trimmedName = name.trim()
+            const saveableName = trimmedName.length ? trimmedName : namePlaceholder
+            onSave({ id: segment.id, name: saveableName, personal })
           }}
         >
           Save

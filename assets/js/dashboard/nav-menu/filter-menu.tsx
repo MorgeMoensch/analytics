@@ -64,11 +64,11 @@ export const FilterMenu = () => {
     >
       {opened && (
         <DropdownMenuWrapper id="filter-menu" className="md:left-auto md:w-56">
-          <SegmentsList close={() => setOpened(false)} />
+          <SegmentsList closeList={() => setOpened(false)} />
           <DropdownLinkGroup>
             {filterListItems.map(({ modalKey, label }) => (
               <DropdownNavigationLink
-                onClick={() => setOpened(false)}
+                onLinkClick={() => setOpened(false)}
                 active={false}
                 key={modalKey}
                 path={filterRoute.path}
