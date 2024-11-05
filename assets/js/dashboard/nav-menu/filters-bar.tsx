@@ -3,7 +3,10 @@
 import { EllipsisHorizontalIcon, XMarkIcon } from '@heroicons/react/20/solid'
 import classNames from 'classnames'
 import React, { useRef, useState, useLayoutEffect, useEffect } from 'react'
-import { AppNavigationLink } from '../navigation/use-app-navigate'
+import {
+  AppNavigationLink,
+  useAppNavigate
+} from '../navigation/use-app-navigate'
 import { useOnClickOutside } from '../util/use-on-click-outside'
 import {
   DropdownMenuWrapper,
@@ -12,8 +15,14 @@ import {
 import { FilterPillsList, PILL_X_GAP } from './filter-pills-list'
 import { useQueryContext } from '../query-context'
 import { SaveSegmentAction } from '../segments/segment-actions'
-import { EditingSegmentState, isSegmentFilter } from '../segments/segments'
+import {
+  EditingSegmentState,
+  isSegmentFilter,
+  parseApiSegmentData
+} from '../segments/segments'
 import { useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { useSiteContext } from '../site-context'
 
 const SEE_MORE_GAP_PX = 16
 const SEE_MORE_WIDTH_PX = 36
@@ -94,6 +103,8 @@ type VisibilityState = {
 }
 
 export const FiltersBar = () => {
+  const site = useSiteContext()
+  const navigate = useAppNavigate()
   const containerRef = useRef<HTMLDivElement>(null)
   const pillsRef = useRef<HTMLDivElement>(null)
   const actionsRef = useRef<HTMLDivElement>(null)
@@ -103,6 +114,48 @@ export const FiltersBar = () => {
   const { state: locationState } = useLocation() as {
     state?: EditingSegmentState
   }
+  const [editingSegmentId, setEditingSegmentId] = useState<number | null>(null)
+
+  useLayoutEffect(() => {
+    if (typeof locationState?.editingSegmentId === 'number') {
+      setEditingSegmentId(locationState.editingSegmentId)
+    }
+  }, [locationState])
+
+  const getSegment = useQuery({
+    enabled: editingSegmentId !== null,
+    queryKey: ['segments', editingSegmentId ?? 0],
+    queryFn: ({ queryKey: [_, id] }) => {
+      return fetch(
+        `/internal-api/${encodeURIComponent(site.domain)}/segments/${id}`,
+        {
+          method: 'GET',
+          headers: {
+            'content-type': 'application/json',
+            accept: 'application/json'
+          }
+        }
+      )
+        .then((res) => res.json())
+        .then((d) => ({
+          ...d,
+          segment_data: parseApiSegmentData(d.segment_data)
+        }))
+    }
+  })
+
+  useLayoutEffect(() => {
+    if (getSegment.data) {
+      navigate({
+        search: (s) => ({
+          ...s,
+          filters: getSegment.data.segment_data.filters,
+          labels: getSegment.data.segment_data.labels
+        })
+      })
+    }
+  }, [getSegment.data])
+  console.log(editingSegmentId, getSegment.data)
 
   const [opened, setOpened] = useState(false)
 
@@ -204,13 +257,14 @@ export const FiltersBar = () => {
             </ToggleDropdownButton>
           )}
         <ClearAction />
-        {!query.filters.some((f) => isSegmentFilter(f)) && (
-          <>
-            <VerticalSeparator />
-            <SaveSegmentAction options={[{ type: 'create segment' }]} />
-          </>
-        )}
-        {typeof locationState?.editingSegmentId === 'number' && (
+        {editingSegmentId === null &&
+          !query.filters.some((f) => isSegmentFilter(f)) && (
+            <>
+              <VerticalSeparator />
+              <SaveSegmentAction options={[{ type: 'create segment' }]} />
+            </>
+          )}
+        {editingSegmentId !== null && !!getSegment.data && (
           <>
             <VerticalSeparator />
             <SaveSegmentAction
@@ -218,9 +272,9 @@ export const FiltersBar = () => {
                 {
                   type: 'update segment',
                   segment: {
-                    id: locationState.editingSegmentId,
-                    name: '',
-                    personal: false
+                    id: getSegment.data.id,
+                    name: getSegment.data.name,
+                    personal: getSegment.data.personal
                   }
                 },
                 { type: 'create segment' }

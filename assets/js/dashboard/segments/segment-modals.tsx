@@ -91,10 +91,8 @@ export const UpdateSegmentModal = ({
   segment: SavedSegment
   namePlaceholder: string
 }) => {
-  const [name, setName] = useState<string | null>(null)
-  const [personal, setPersonal] = useState<boolean>(false)
+  const [personal, setPersonal] = useState<boolean>(segment.personal)
   const inputRef = useRef<HTMLInputElement>(null)
-  console.log(segment, name)
 
   return (
     <ModalWithRouting maxWidth="460px" className="p-6 min-h-fit" close={close}>
@@ -130,7 +128,7 @@ export const UpdateSegmentModal = ({
             aria-hidden="true"
             className={classNames(
               'inline-block h-5 w-5 rounded-full bg-white dark:bg-gray-800 shadow transform transition ease-in-out duration-200',
-              (segment.personal ?? personal) ? 'translate-x-0' : 'translate-x-5'
+              personal ? 'translate-x-0' : 'translate-x-5'
             )}
           />
         </button>

@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react'
 import { useAppNavigate } from '../navigation/use-app-navigate'
 import { useQueryContext } from '../query-context'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { DashboardQuery } from '../query'
 import { useSiteContext } from '../site-context'
 import {
@@ -161,33 +161,6 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
 
   const option = options.find((o) => o.type === modal)
 
-  const getSegment = useQuery({
-    enabled:
-      typeof options.find((o) => o.type === 'update segment')?.segment.id ===
-      'number',
-    queryKey: [
-      'segments',
-      options.find((o) => o.type === 'update segment')?.segment.id
-    ],
-    queryFn: ({ queryKey: [_, id] }) => {
-      return fetch(
-        `/internal-api/${encodeURIComponent(site.domain)}/segments/${id}`,
-        {
-          method: 'GET',
-          headers: {
-            'content-type': 'application/json',
-            accept: 'application/json'
-          }
-        }
-      )
-        .then((res) => res.json())
-        .then((d) => ({
-          ...d,
-          segment_data: parseApiSegmentData(d.segment_data)
-        }))
-        .then(() => navigate({ search: (s) => ({ ...s,  }) }))
-    }
-  })
 
   return (
     <div>
@@ -240,11 +213,11 @@ export const SaveSegmentAction = ({ options }: { options: O[] }) => {
             patchSegment.mutate({
               id,
               name,
-              personal
-              // segment_data: {
-              //   filters: query.filters,
-              //   labels: query.labels
-              // }
+              personal,
+              segment_data: {
+                filters: query.filters,
+                labels: query.labels
+              }
             })
           }
         />
