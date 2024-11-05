@@ -38,6 +38,10 @@ defmodule Plausible.Stats.Query do
         |> put_experimental_reduced_joins(site, params)
         |> struct!(v2: true, now: DateTime.utc_now(:second), debug_metadata: debug_metadata)
 
+      on_ee do
+        query = Plausible.Stats.Sampling.put_threshold(query, site, params)
+      end
+
       {:ok, query}
     end
   end
@@ -61,8 +65,21 @@ defmodule Plausible.Stats.Query do
     end
   end
 
-  def date_range(query) do
-    Plausible.Stats.DateTimeRange.to_date_range(query.utc_time_range, query.timezone)
+  def date_range(query, options \\ []) do
+    date_range = Plausible.Stats.DateTimeRange.to_date_range(query.utc_time_range, query.timezone)
+
+    if Keyword.get(options, :trim_trailing) do
+      Date.range(
+        date_range.first,
+        earliest(date_range.last, query.now)
+      )
+    else
+      date_range
+    end
+  end
+
+  defp earliest(a, b) do
+    if Date.compare(a, b) in [:eq, :lt], do: a, else: b
   end
 
   def set(query, keywords) do

@@ -247,7 +247,7 @@ export default class SiteSwitcher extends React.Component {
             {this.props.site.domain}
           </span>
           {this.props.loggedIn && (
-            <ChevronDownIcon className="ml-2 h-4 w-4 shrink-0" />
+            <ChevronDownIcon className="ml-2 h-5 w-5 shrink-0" />
           )}
         </button>
 

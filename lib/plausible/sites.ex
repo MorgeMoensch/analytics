@@ -71,8 +71,24 @@ defmodule Plausible.Sites do
     )
   end
 
-  @spec list(Auth.User.t(), map(), [list_opt()]) :: Scrivener.Page.t()
   def list(user, pagination_params, opts \\ []) do
+    if Plausible.Teams.read_team_schemas?(user) do
+      Plausible.Teams.Sites.list(user, pagination_params, opts)
+    else
+      old_list(user, pagination_params, opts)
+    end
+  end
+
+  def list_with_invitations(user, pagination_params, opts \\ []) do
+    if Plausible.Teams.read_team_schemas?(user) do
+      Plausible.Teams.Sites.list_with_invitations(user, pagination_params, opts)
+    else
+      old_list_with_invitations(user, pagination_params, opts)
+    end
+  end
+
+  @spec old_list(Auth.User.t(), map(), [list_opt()]) :: Scrivener.Page.t()
+  def old_list(user, pagination_params, opts \\ []) do
     domain_filter = Keyword.get(opts, :filter_by_domain)
 
     from(s in Site,
@@ -104,8 +120,8 @@ defmodule Plausible.Sites do
     |> Repo.paginate(pagination_params)
   end
 
-  @spec list_with_invitations(Auth.User.t(), map(), [list_opt()]) :: Scrivener.Page.t()
-  def list_with_invitations(user, pagination_params, opts \\ []) do
+  @spec old_list_with_invitations(Auth.User.t(), map(), [list_opt()]) :: Scrivener.Page.t()
+  def old_list_with_invitations(user, pagination_params, opts \\ []) do
     domain_filter = Keyword.get(opts, :filter_by_domain)
 
     result =
@@ -206,6 +222,10 @@ defmodule Plausible.Sites do
         Site.Membership.new(site, user)
       end)
       |> maybe_start_trial(user)
+      |> Ecto.Multi.run(:sync_team, fn _repo, %{user: user} ->
+        Plausible.Teams.sync_team(user)
+        {:ok, nil}
+      end)
       |> Repo.transaction()
     end
   end
@@ -218,7 +238,7 @@ defmodule Plausible.Sites do
         end)
 
       _ ->
-        multi
+        Ecto.Multi.put(multi, :user, user)
     end
   end
 

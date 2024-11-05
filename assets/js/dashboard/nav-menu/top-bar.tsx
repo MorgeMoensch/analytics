@@ -9,6 +9,7 @@ import QueryPeriodPicker from '../datepicker'
 import classNames from 'classnames'
 import { useInView } from 'react-intersection-observer'
 import { FilterMenu } from './filter-menu'
+import Filters from '../filters'
 
 interface TopBarProps {
   showCurrentVisitors: boolean
@@ -20,6 +21,7 @@ export function TopBar({ showCurrentVisitors, extraBar }: TopBarProps) {
   const user = useUserContext()
   const tooltipBoundary = useRef(null)
   const { ref, inView } = useInView({ threshold: 0 })
+  const { saved_segments } = site.flags
 
   return (
     <>
@@ -42,11 +44,11 @@ export function TopBar({ showCurrentVisitors, extraBar }: TopBarProps) {
             {showCurrentVisitors && (
               <CurrentVisitors tooltipBoundary={tooltipBoundary.current} />
             )}
-            <FilterMenu />
+            {saved_segments ? <FilterMenu /> : <Filters />}
           </div>
           <QueryPeriodPicker />
         </div>
-        {!!extraBar && extraBar}
+        {!!saved_segments && !!extraBar && extraBar}
       </div>
     </>
   )

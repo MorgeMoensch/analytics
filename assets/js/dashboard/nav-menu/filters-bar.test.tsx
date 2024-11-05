@@ -11,7 +11,7 @@ import { stringifySearch } from '../util/url'
 const domain = 'dummy.site'
 
 beforeAll(() => {
-  global.ResizeObserver = jest.fn(
+  const mockResizeObserver = jest.fn(
     (handleEntries) =>
       ({
         observe: jest
@@ -23,6 +23,7 @@ beforeAll(() => {
         disconnect: jest.fn()
       }) as unknown as ResizeObserver
   )
+  global.ResizeObserver = mockResizeObserver
 })
 
 test('user can see expected filters and clear them one by one or all together', async () => {

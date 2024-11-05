@@ -33,7 +33,11 @@ export default function CurrentVisitors({ tooltipBoundary }) {
     updateCount()
   }, [query, updateCount])
 
-  if (currentVisitors !== null) {
+  if (
+    site.flags.saved_segments
+      ? currentVisitors !== null
+      : currentVisitors !== null && query.filters.length === 0
+  ) {
     return (
       <Tooltip
         info={

@@ -13,6 +13,9 @@ import { TestContextProviders } from '../../../test-utils/app-context-providers'
 import { TopBar } from './top-bar'
 import { MockAPI } from '../../../test-utils/mock-api'
 
+const flags = {
+  saved_segments: true
+}
 const domain = 'dummy.site'
 const domains = [domain, 'example.com', 'blog.example.com']
 
@@ -42,7 +45,7 @@ beforeEach(() => {
 test('user can open and close site switcher', async () => {
   render(<TopBar showCurrentVisitors={false} />, {
     wrapper: (props) => (
-      <TestContextProviders siteOptions={{ domain }} {...props} />
+      <TestContextProviders siteOptions={{ domain, flags }} {...props} />
     )
   })
 
@@ -64,7 +67,7 @@ test('user can open and close site switcher', async () => {
 test('user can open and close filters dropdown', async () => {
   render(<TopBar showCurrentVisitors={false} />, {
     wrapper: (props) => (
-      <TestContextProviders siteOptions={{ domain }} {...props} />
+      <TestContextProviders siteOptions={{ domain, flags }} {...props} />
     )
   })
 
@@ -89,7 +92,7 @@ test('current visitors renders when visitors are present and disappears after vi
   mockAPI.get(`/api/stats/${domain}/current-visitors?`, 500)
   render(<TopBar showCurrentVisitors={true} />, {
     wrapper: (props) => (
-      <TestContextProviders siteOptions={{ domain }} {...props} />
+      <TestContextProviders siteOptions={{ domain, flags }} {...props} />
     )
   })
 

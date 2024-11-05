@@ -44,19 +44,57 @@ defmodule Plausible.Teams.Invitations do
     role = translate_role(site_invitation.role)
 
     if site_invitation.role == :owner do
-      create_site_transfer(
-        site,
-        site_invitation.inviter,
-        site_invitation.email
+      {:ok, site_transfer} =
+        create_site_transfer(
+          site,
+          site_invitation.inviter,
+          site_invitation.email
+        )
+
+      site_transfer
+      |> Ecto.Changeset.change(transfer_id: site_invitation.invitation_id)
+      |> Repo.update!()
+    else
+      {:ok, guest_invitation} =
+        create_invitation(
+          site,
+          site_invitation.email,
+          role,
+          site_invitation.inviter
+        )
+
+      guest_invitation.team_invitation
+      |> Ecto.Changeset.change(invitation_id: site_invitation.invitation_id)
+      |> Repo.update!()
+    end
+  end
+
+  def remove_invitation_sync(site_invitation) do
+    site = Repo.preload(site_invitation, :site).site
+    site = Teams.load_for_site(site)
+
+    if site_invitation.role == :owner do
+      Repo.delete_all(
+        from(
+          st in Teams.SiteTransfer,
+          where: st.email == ^site_invitation.email,
+          where: st.team_id == ^site.team.id
+        )
       )
     else
-      create_invitation(
-        site,
-        site_invitation.email,
-        role,
-        site_invitation.inviter
+      Repo.delete_all(
+        from(
+          gi in Teams.GuestInvitation,
+          inner_join: ti in assoc(gi, :team_invitation),
+          where: ti.email == ^site_invitation.email,
+          where: gi.site_id == ^site.id
+        )
       )
+
+      prune_guest_invitations(site.team)
     end
+
+    :ok
   end
 
   def transfer_site(site, new_owner, now \\ NaiveDateTime.utc_now(:second)) do
@@ -141,10 +179,21 @@ defmodule Plausible.Teams.Invitations do
 
     team_invitation =
       guest_invitation.team_invitation
-      |> Repo.preload([:team, :inviter, guest_invitations: :site])
+      |> Repo.preload([
+        :team,
+        :inviter,
+        guest_invitations: :site
+      ])
 
     {:ok, _} =
-      do_accept(team_invitation, user, NaiveDateTime.utc_now(:second), send_email?: false)
+      result =
+      do_accept(team_invitation, user, NaiveDateTime.utc_now(:second),
+        send_email?: false,
+        guest_invitations: [guest_invitation]
+      )
+
+    prune_guest_invitations(team_invitation.team)
+    result
   end
 
   def accept_transfer_sync(site_invitation, user) do
@@ -195,7 +244,8 @@ defmodule Plausible.Teams.Invitations do
     |> Teams.SiteTransfer.changeset(initiator: initiator, email: invitee_email)
     |> Repo.insert(
       on_conflict: [set: [updated_at: now]],
-      conflict_target: [:email, :site_id]
+      conflict_target: [:email, :site_id],
+      returning: true
     )
   end
 
@@ -214,7 +264,7 @@ defmodule Plausible.Teams.Invitations do
 
   defp do_accept(team_invitation, user, now, opts \\ []) do
     send_email? = Keyword.get(opts, :send_email?, true)
-    guest_invitations = team_invitation.guest_invitations
+    guest_invitations = Keyword.get(opts, :guest_invitations, team_invitation.guest_invitations)
 
     Repo.transaction(fn ->
       with {:ok, team_membership} <-
@@ -301,7 +351,8 @@ defmodule Plausible.Teams.Invitations do
             |> Teams.GuestMembership.changeset(site, old_guest_membership.role)
             |> Repo.insert(
               on_conflict: [set: [updated_at: now, role: old_guest_membership.role]],
-              conflict_target: [:team_membership_id, :site_id]
+              conflict_target: [:team_membership_id, :site_id],
+              returning: true
             )
         end
 
@@ -322,7 +373,8 @@ defmodule Plausible.Teams.Invitations do
         |> Teams.GuestMembership.changeset(site, :editor)
         |> Repo.insert(
           on_conflict: [set: [updated_at: now, role: :editor]],
-          conflict_target: [:team_membership_id, :site_id]
+          conflict_target: [:team_membership_id, :site_id],
+          returning: true
         )
     end
 
@@ -460,7 +512,11 @@ defmodule Plausible.Teams.Invitations do
 
     team
     |> Teams.Invitation.changeset(email: invitee_email, role: :guest, inviter: inviter)
-    |> Repo.insert(on_conflict: [set: [updated_at: now]], conflict_target: [:team_id, :email])
+    |> Repo.insert(
+      on_conflict: [set: [updated_at: now]],
+      conflict_target: [:team_id, :email],
+      returning: true
+    )
   end
 
   defp create_guest_invitation(team_invitation, site, role) do
@@ -470,7 +526,8 @@ defmodule Plausible.Teams.Invitations do
     |> Teams.GuestInvitation.changeset(site, role)
     |> Repo.insert(
       on_conflict: [set: [updated_at: now]],
-      conflict_target: [:team_invitation_id, :site_id]
+      conflict_target: [:team_invitation_id, :site_id],
+      returning: true
     )
   end
 
@@ -501,7 +558,8 @@ defmodule Plausible.Teams.Invitations do
     |> Teams.Membership.changeset(user, role)
     |> Repo.insert(
       on_conflict: [set: [updated_at: now]],
-      conflict_target: [:team_id, :user_id]
+      conflict_target: [:team_id, :user_id],
+      returning: true
     )
   end
 
