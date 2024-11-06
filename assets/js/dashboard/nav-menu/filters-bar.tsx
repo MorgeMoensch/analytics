@@ -245,7 +245,7 @@ export const FiltersBar = () => {
 export const ClearAction = () => (
   <AppNavigationLink
     title="Clear all filters"
-    className="w-4 text-gray-500 hover:text-indigo-700 dark:hover:text-indigo-500 flex items-center justify-center"
+    className="px-1 text-gray-500 hover:text-indigo-700 dark:hover:text-indigo-500 flex items-center justify-center"
     search={(search) => ({
       ...search,
       filters: null,
