@@ -116,6 +116,12 @@ export const FiltersBar = () => {
     }
   }, [locationState?.editingSegment])
 
+  useLayoutEffect(() => {
+    if (!query.filters.length) {
+      setEditingSegment(null)
+    }
+  }, [query.filters.length])
+
   const [opened, setOpened] = useState(false)
 
   useEffect(() => {
@@ -164,7 +170,7 @@ export const FiltersBar = () => {
   return (
     <div
       className={classNames(
-        'flex w-full mt-4',
+        'flex w-full mt-3',
         visibility === null && 'invisible' // hide until we've calculated the positions
       )}
       ref={containerRef}
